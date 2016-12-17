@@ -3,62 +3,85 @@
 
 \ExplSyntaxOn
 
-\cs_set_nopar:Npn \exp_args:Nfff { \::f \::f \::f \::: }
+\cs_set_nopar:Npn \exp_args:NNff { \::N \::f \::f \::: }
+\cs_set_nopar:Npn \exp_args:NNfff { \::N \::f \::f \::f \::: }
 
-\cs_new:Npn \inside_name:nn #1#2 {
-  \tl_set:Nn \name { #1 }
-  \tl_set:Nf \car_input { \tl_head:n { #2 } }
-  \tl_set:Nf \cdr_input { \tl_tail:n { #2 } }
-
-  \tl_if_head_is_group:nTF { #2 }
-     {
-       \exp_args:Nff \inside_name:nn {} { \car_input \relax \cdr_input }
-     }
-     { \tl_if_head_eq_charcode:nNTF { #2 } { : }
-       {
-         \exp_args:Nfff \inside_val:nnn {} { \name } \cdr_input
-       }
-       { 
-         \tl_set:Nx \app_name { \name\car_input }         
-         \exp_args:Nff \inside_name:nn { \app_name } { \cdr_input }
-       }
-     }
-}
-
-\cs_new:Npn \inside_val:nnn #1#2#3{
-  \tl_set:Nn \val { #1 }
+\cs_new:Npn \inside_name:Nnn #1#2#3 {
   \tl_set:Nn \name { #2 }
-  \tl_set:Nf \car_input { \tl_if_head_is_space:nTF { #3 } { \show#3 ~ } { \tl_head:n { #3 } } }
+  \tl_set:Nf \car_input { \tl_head:n { #3 } }
   \tl_set:Nf \cdr_input { \tl_tail:n { #3 } }
 
   \tl_if_head_is_group:nTF { #3 }
      {
-       \exp_args:Nfff \inside_val:nnn { \car_input } { \name } { \cdr_input }
+       \exp_args:NNff \inside_name:Nnn #1 {} { \car_input \relax \cdr_input }
      }
-     { \tl_if_head_eq_charcode:nNTF { #3 } { , }
+     { \tl_if_head_eq_charcode:nNTF { #3 } { : }
        {
-         \exp_args:Nff \add_key_val:nn { \name } { \val }
-         \exp_args:Nff \inside_name:nn {} { \cdr_input }
-       } 
-       { \tl_if_head_eq_meaning:nNTF { #3 } { \relax }
+         \exp_args:NNfff \inside_val:Nnnn #1 {} { \name } \cdr_input
+       }
+       { 
+         \tl_set:Nx \app_name { \name\car_input }         
+         \exp_args:NNff \inside_name:Nnn #1 { \app_name } { \cdr_input }
+       }
+     }
+}
+
+\cs_new:Npn \inside_val:Nnnn #1#2#3#4 {
+  \tl_set:Nn \val { #2 }
+  \tl_set:Nn \name { #3 }
+  \tl_set:Nf \car_input { \tl_if_head_is_space:nTF { #4 } { \show#4 ~ } { \tl_head:n { #4 } } }
+  \tl_set:Nf \cdr_input { \tl_tail:n { #4 } }
+
+  \tl_if_head_is_group:nTF { #4 }
+     {
+       \exp_args:NNfff \inside_val:Nnnn #1 { \car_input } { \name } { \cdr_input }
+     }
+     { \tl_if_head_eq_charcode:nNTF { #4 } { , }
+       {
+         \exp_args:NNff \add_key_val:Nnn #1 { \name } { \val }
+         \exp_args:NNff \inside_name:Nnn #1 {} { \cdr_input }
+       }
+       { \tl_if_head_eq_charcode:nNTF { #4 } { " }
          {
-           \exp_args:Nff \add_key_val:nn { \name } { \val }
+           \exp_args:NNf \inside_string #1 { \name } #4
          }
-         {
-           \tl_set:Nx \app_val { \val\car_input }
-           \exp_args:Nfff \inside_val:nnn { \app_val } { \name } { \cdr_input }
+         { \tl_if_head_eq_meaning:nNTF { #4 } { \relax }
+           {
+             \exp_args:NNff \add_key_val:Nnn #1 { \name } { \val }
+           }
+           {
+             \tl_set:Nx \app_val { \val\car_input }
+             \exp_args:NNfff \inside_val:Nnnn #1 { \app_val } { \name } { \cdr_input }
+           }
          }
        }
      }
 }
 
-\cs_new:Npn \add_key_val:nn #1#2 {
-  \expandafter\gdef\csname json@#1\endcsname{#2}
+% No double quotation within a string
+\cs_new:Npn \inside_string #1#2"#3"#4 {
+  \tl_set:Nn \name { #2 }
+  \tl_set:Nn \jsonstr { \tl_to_str:n { #3 } }
+
+  \exp_args:NNfff \inside_val:Nnnn #1 \jsonstr { \name } { #4 }
+}
+  
+\cs_new:Npn \add_key_val:Nnn #1#2#3 {
+  \exp_args:NNff \prop_put:Nnn #1 { #2 } { #3 }
 }
 
-\def\readjson#1{%
-  \tl_set:Nn \cdr_input { \tl_tail:n { #1 } }
-  \exp_args:Nff \inside_name:nn {} { #1 }
+\def\readJson#1#2{%
+  \prop_new:N #1
+  \tl_set:Nn \cdr_input { \tl_tail:n { #2 } }
+  \exp_args:NNff \inside_name:Nnn #1 {} { #2 }
+}
+
+\def\showById#1#2{%
+  \prop_item:Nn #1 { #2 }
+}
+
+\def\getById#1#2#3{%
+  \prop_get:NnN #1 { #2 } #3
 }
 
 \ExplSyntaxOff
@@ -67,19 +90,21 @@
 
 \makeatletter
 
-\readjson{{id:123, class:foo, data:{id:456}, info:"is this a text?"}}
+\readJson{\MyJson}{{id:123, class:foo, data:{id:456}, info:"Is this a text?"}}
 
-id = \json@id
+id = \showById{\MyJson}{id}
 
-class = \json@class
+class = \showById{\MyJson}{class}
 
-data = \json@data
+data = \showById{\MyJson}{data}
 
-info = \json@info
+info = \showById{\MyJson}{info}
 
-\readjson{{\json@data}}
+\getById{\MyJson}{data}{\MyJsonData}
 
-data.id = \json@id
+\readJson{\temp}{{\MyJsonData}}
+
+data.id = \showById{\temp}{id}
 
 \makeatother
 
