@@ -1,0 +1,86 @@
+\documentclass{article}
+\usepackage{expl3}
+
+\ExplSyntaxOn
+
+\cs_set_nopar:Npn \exp_args:Nfff { \::f \::f \::f \::: }
+
+\cs_new:Npn \inside_name:nn #1#2 {
+  \tl_set:Nn \name { #1 }
+  \tl_set:Nf \car_input { \tl_head:n { #2 } }
+  \tl_set:Nf \cdr_input { \tl_tail:n { #2 } }
+
+  \tl_if_head_is_group:nTF { #2 }
+     {
+       \exp_args:Nff \inside_name:nn {} { \car_input \relax \cdr_input }
+     }
+     { \tl_if_head_eq_charcode:nNTF { #2 } { : }
+       {
+         \exp_args:Nfff \inside_val:nnn {} { \name } \cdr_input
+       }
+       { 
+         \tl_set:Nx \app_name { \name\car_input }         
+         \exp_args:Nff \inside_name:nn { \app_name } { \cdr_input }
+       }
+     }
+}
+
+\cs_new:Npn \inside_val:nnn #1#2#3{
+  \tl_set:Nn \val { #1 }
+  \tl_set:Nn \name { #2 }
+  \tl_set:Nf \car_input { \tl_if_head_is_space:nTF { #3 } { \show#3 ~ } { \tl_head:n { #3 } } }
+  \tl_set:Nf \cdr_input { \tl_tail:n { #3 } }
+
+  \tl_if_head_is_group:nTF { #3 }
+     {
+       \exp_args:Nfff \inside_val:nnn { \car_input } { \name } { \cdr_input }
+     }
+     { \tl_if_head_eq_charcode:nNTF { #3 } { , }
+       {
+         \exp_args:Nff \add_key_val:nn { \name } { \val }
+         \exp_args:Nff \inside_name:nn {} { \cdr_input }
+       } 
+       { \tl_if_head_eq_meaning:nNTF { #3 } { \relax }
+         {
+           \exp_args:Nff \add_key_val:nn { \name } { \val }
+         }
+         {
+           \tl_set:Nx \app_val { \val\car_input }
+           \exp_args:Nfff \inside_val:nnn { \app_val } { \name } { \cdr_input }
+         }
+       }
+     }
+}
+
+\cs_new:Npn \add_key_val:nn #1#2 {
+  \expandafter\gdef\csname json@#1\endcsname{#2}
+}
+
+\def\readjson#1{%
+  \tl_set:Nn \cdr_input { \tl_tail:n { #1 } }
+  \exp_args:Nff \inside_name:nn {} { #1 }
+}
+
+\ExplSyntaxOff
+
+\begin{document}
+
+\makeatletter
+
+\readjson{{id:123, class:foo, data:{id:456}, info:"is this a text?"}}
+
+id = \json@id
+
+class = \json@class
+
+data = \json@data
+
+info = \json@info
+
+\readjson{{\json@data}}
+
+data.id = \json@id
+
+\makeatother
+
+\end{document}
