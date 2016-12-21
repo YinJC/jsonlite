@@ -132,27 +132,68 @@
   \prop_get:NnN #1 { #2 } #3
 }
 
+\def\showArray#1{%
+  \seq_use:cnnn { #1 } { ~and~ } { ,~ } { ,~and~ }
+}
+
+\def\showWeather#1{%
+  \seq_map_function:cN #1 \format_weather:n
+}
+
+\cs_new:Npn \format_weather:n #1 {
+  \readJson{\temp_data}{{#1}}
+  \str_set:Nx \str_the_weather { \showById{\temp_data}{"main"} }
+
+  \str_case:onTF { \str_the_weather }
+      {
+        {Clouds} { CLOUDS }
+      }
+      { }
+      { \str_the_weather }
+}
+
+
 \ExplSyntaxOff
 
 \begin{document}
 
 \makeatletter
 
-\readJson{\MyJson}{{id:123, class:foo, data:{id:456}, info:"Is this a text?"}}
+\readJson{\MyJson}{{id:[1,2,3], class:foo, data:{id:456}, info:"Is this a text?", hoge:"foo"}}
 
-id = \showById{\MyJson}{id}
+%\readJson{\weather}{{"coord":{"lon":139.69,"lat":35.69},"weather":[{"id":801,"main":"Clouds","description":"few clouds","icon":"02n"}],"base":"stations","main":{"temp":285.15,"pressure":1023,"humidity":66,"temp_min":285.15,"temp_max":285.15},"visibility":10000,"wind":{"speed":2.1,"deg":70},"clouds":{"all":20},"dt":1482219420,"sys":{"type":1,"id":7619,"message":0.2123,"country":"JP","sunrise":1482184008,"sunset":1482219076},"id":1850147,"name":"Tokyo","cod":200}}
 
-class = \showById{\MyJson}{class}
+\newread\injson \openin\injson=weather.json
+\read\injson to \data
+\readJson{\TokyoJp}{\data}
 
-data = \showById{\MyJson}{data}
+%\readJson{\weather}{\testdata}
+%\showById{\TokyoJp}{"name"}
 
-info = \showById{\MyJson}{info}
+\edef\tokyoweather{\showById{\TokyoJp}{"weather"}}
 
-\getById{\MyJson}{data}{\MyJsonData}
+\showWeather{\tokyoweather}
 
-\readJson{\temp}{{\MyJsonData}}
+%\showArray{\tokyoweather}%\showById{\TokyoJp}{"weather"}}
 
-data.id = \showById{\temp}{id}
+%\showById{\TokyoJp}{"weather"}
+%\readJson{\TokyoWeater}{{\temp}}
+
+
+
+%id = \showArray{\showById{\MyJson}{id}}
+
+%class = \showById{\MyJson}{class}
+
+%data = \showById{\MyJson}{data}
+
+%info = \showById{\MyJson}{info}
+
+%\getById{\MyJson}{data}{\MyJsonData}
+
+%\readJson{\temp}{{\MyJsonData}}
+
+%data.id = \showById{\temp}{id}
 
 \makeatother
 
