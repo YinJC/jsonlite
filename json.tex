@@ -5,8 +5,13 @@
 
 \cs_set_nopar:Npn \exp_args:NNff { \::N \::f \::f \::: }
 \cs_set_nopar:Npn \exp_args:NNfff { \::N \::f \::f \::f \::: }
+\cs_set_nopar:Npn \exp_args:NNNff { \::N \::N \::f \::f \::: }
+\cs_set_nopar:Npn \exp_args:NNffff { \::N \::f \::f \::f \::f \::: }
+\cs_set_nopar:Npn \exp_args:NNNfff { \::N \::N \::f \::f \::f \::: }
+\cs_set_nopar:Npn \exp_args:NNcfff { \::N \::c \::f \::f \::f \::: }
 
 \cs_new:Npn \inside_name:Nnn #1#2#3 {
+  % #1 is a proplist
   \tl_set:Nn \name { #2 }
   \tl_set:Nf \car_input { \tl_head:n { #3 } }
   \tl_set:Nf \cdr_input { \tl_tail:n { #3 } }
@@ -27,9 +32,10 @@
 }
 
 \cs_new:Npn \inside_val:Nnnn #1#2#3#4 {
+  % #1 is a proplist
   \tl_set:Nn \val { #2 }
   \tl_set:Nn \name { #3 }
-  \tl_set:Nf \car_input { \tl_if_head_is_space:nTF { #4 } { \show#4 ~ } { \tl_head:n { #4 } } }
+  \tl_set:Nf \car_input { \tl_head:n { #4 } }
   \tl_set:Nf \cdr_input { \tl_tail:n { #4 } }
 
   \tl_if_head_is_group:nTF { #4 }
@@ -41,17 +47,23 @@
          \exp_args:NNff \add_key_val:Nnn #1 { \name } { \val }
          \exp_args:NNff \inside_name:Nnn #1 {} { \cdr_input }
        }
-       { \tl_if_head_eq_charcode:nNTF { #4 } { " }
+       { \tl_if_head_eq_charcode:nNTF { #4 } { [ }
          {
-           \exp_args:NNf \inside_string #1 { \name } #4
-         }
-         { \tl_if_head_eq_meaning:nNTF { #4 } { \relax }
+           \seq_new:c { seq_\name }
+           \exp_args:NNcfff \inside_array:Nnnnn #1 { seq_\name } {} { \name } { \cdr_input }
+         }  
+         { \tl_if_head_eq_charcode:nNTF { #4 } { " }
            {
-             \exp_args:NNff \add_key_val:Nnn #1 { \name } { \val }
+             \exp_args:NNf \inside_string #1 { \name } #4
            }
-           {
-             \tl_set:Nx \app_val { \val\car_input }
-             \exp_args:NNfff \inside_val:Nnnn #1 { \app_val } { \name } { \cdr_input }
+           { \tl_if_head_eq_meaning:nNTF { #4 } { \relax }
+             {
+               \exp_args:NNff \add_key_val:Nnn #1 { \name } { \val }
+             }
+             {
+               \tl_set:Nx \app_val { \val\car_input }
+               \exp_args:NNfff \inside_val:Nnnn #1 { \app_val } { \name } { \cdr_input }
+             }
            }
          }
        }
@@ -59,13 +71,49 @@
 }
 
 % No double quotation within a string
-\cs_new:Npn \inside_string #1#2"#3"#4 {
+\cs_new:Npn \inside_string #1#2"#3"#4\relax {
+  % #1 is a control sequence for a proplist
   \tl_set:Nn \name { #2 }
   \tl_set:Nn \jsonstr { \tl_to_str:n { #3 } }
 
-  \exp_args:NNfff \inside_val:Nnnn #1 \jsonstr { \name } { #4 }
+  \exp_args:NNNff \inside_val:Nnnn #1 \jsonstr { \name } { #4\relax }
 }
-  
+
+% returns the seqence name as string, since proplist is able to hold only text
+\cs_new:Npn \inside_array:Nnnnn #1#2#3#4#5 {
+  % #1 is a proplist
+  % #2 is a sequence
+  \tl_set:Nn \array_item { #3 }
+  \tl_set:Nn \name { #4 }
+  \tl_set:Nf \car_input { \tl_head:n { #5 } }
+  \tl_set:Nf \cdr_input { \tl_tail:n { #5 } }
+
+  \tl_if_head_is_group:nTF { #4 }
+     {
+       \exp_args:NNNfff \inside_array:Nnnnn #1 #2 { \car_input } { \name } { \cdr_input }
+     }
+     { \tl_if_head_eq_charcode:nNTF { #5 } { ] }
+       {
+         \add_array_item:Nn #2 { \array_item }
+         \exp_args:NNfff \inside_val:Nnnn #1 { \cs_to_str:N #2 } { \name } { \cdr_input }
+       }
+       { \tl_if_head_eq_charcode:nNTF { #5 } { , }
+         {
+           \add_array_item:Nn #2 { \array_item }
+           \exp_args:NNNfff \inside_array:Nnnnn #1 #2 {} { \name } { \cdr_input }
+         }
+         {
+           \exp_args:NNNfff \inside_array:Nnnnn #1 #2 { \array_item\car_input } { \name } { \cdr_input }
+         }
+       }
+     }
+}
+
+
+\cs_new:Npn \add_array_item:Nn #1#2 {
+  \exp_args:NNf \seq_put_right:Nn #1 { #2 }
+}
+
 \cs_new:Npn \add_key_val:Nnn #1#2#3 {
   \exp_args:NNff \prop_put:Nnn #1 { #2 } { #3 }
 }
