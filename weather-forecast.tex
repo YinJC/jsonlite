@@ -1,0 +1,47 @@
+\documentclass{article}
+\usepackage{jsontex}
+
+\ExplSyntaxOn
+
+\def\showWeather#1{%
+  \seq_map_function:cN #1 \format_weather:n
+}
+
+\def\showForecast#1{%
+  \seq_map_function:cN #1 \format_forecast:n
+}
+
+\cs_new:Npn \format_forecast:n #1 {
+  \readJson{\temp_forecast}{{#1}}
+  \edef\weather{\showJsonValueById{\temp_forecast}{"weather"}}
+  \showWeather{\weather}
+  \cs_undefine:N \temp_forecast
+}
+
+\cs_new:Npn \format_weather:n #1 {
+  \readJson{\temp_data}{{#1}}
+  \str_set:Nx \str_the_weather { \showJsonValueById{\temp_data}{"main"} }
+
+  \str_case:onTF { \str_the_weather }
+      {
+        {Clouds} { ☃ }
+      }
+      { \par }
+      { \str_the_weather \par }
+  \cs_undefine:N \temp_data
+}
+
+\ExplSyntaxOff
+
+\begin{document}
+
+\newread\injson \openin\injson=forecast.json
+\read\injson to \forecast
+\readJson{\TokyoJpForecast}{\forecast}
+
+\readJsonValueById{\cityValue}{\TokyoJpForecast}{"city"}
+\readJson{\cityName}{{\cityValue}}
+\readJsonValueById{\temp}{\cityName}{"name"}
+\message{\temp}
+
+\end{document}
