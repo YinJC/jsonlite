@@ -144,17 +144,40 @@
   \seq_map_function:cN #1 \format_weather:n
 }
 
+\def\showForecast#1{%
+  \seq_map_function:cN #1 \format_forecast:n
+}
+
+\cs_new:Npn \format_forecast:n #1 {
+  \readJson{\temp_forecast}{{#1}}
+  \edef\weather{\showById{\temp_forecast}{"weather"}}
+  \showWeather{\weather}
+  \cs_undefine:N \temp_forecast
+}
+
 \cs_new:Npn \format_weather:n #1 {
   \readJson{\temp_data}{{#1}}
   \str_set:Nx \str_the_weather { \showById{\temp_data}{"main"} }
 
   \str_case:onTF { \str_the_weather }
       {
-        {Clouds} { CLOUDS }
+        {Clouds} { ☃ }
       }
-      { }
-      { \str_the_weather }
+      { \par }
+      { \str_the_weather \par }
+  \cs_undefine:N \temp_data
 }
+
+\def\showTugDesc#1{%
+  \seq_map_function:cN #1 \format_tugdesc:n
+}
+
+\cs_new:Npn \format_tugdesc:n #1 {
+  \readJson{\temp_desc}{{#1}}
+  \showById{\temp_desc}{"text"}
+  \cs_undefine:N \temp_desc
+}
+
 
 
 \ExplSyntaxOff
@@ -163,20 +186,23 @@
 
 \makeatletter
 
-\readJson{\MyJson}{{id:[1,2,3], class:foo, data:{id:456}, info:"Is this a text?", hoge:"foo"}}
 
 %\readJson{\weather}{{"coord":{"lon":139.69,"lat":35.69},"weather":[{"id":801,"main":"Clouds","description":"few clouds","icon":"02n"}],"base":"stations","main":{"temp":285.15,"pressure":1023,"humidity":66,"temp_min":285.15,"temp_max":285.15},"visibility":10000,"wind":{"speed":2.1,"deg":70},"clouds":{"all":20},"dt":1482219420,"sys":{"type":1,"id":7619,"message":0.2123,"country":"JP","sunrise":1482184008,"sunset":1482219076},"id":1850147,"name":"Tokyo","cod":200}}
 
-\newread\injson \openin\injson=weather.json
-\read\injson to \data
-\readJson{\TokyoJp}{\data}
+%\newread\injson \openin\injson=weather.json
+%\read\injson to \data
+%\readJson{\TokyoJp}{\data}
 
-%\readJson{\weather}{\testdata}
-%\showById{\TokyoJp}{"name"}
+\newread\injson \openin\injson=forecast.json
+\read\injson to \forecast
+\readJson{\TokyoJpForecast}{\forecast}
 
-\edef\tokyoweather{\showById{\TokyoJp}{"weather"}}
+%\edef\tokyoforecast{\showById{\TokyoJpForecast}{"list"}}
+%\showForecast{\tokyoforecast}
 
-\showWeather{\tokyoweather}
+\getById{\TokyoJpForecast}{"city"}{\cityValue}
+\readJson{\cityName}{{\cityValue}}
+\message{\showById{\cityName}{"name"}}
 
 %\showArray{\tokyoweather}%\showById{\TokyoJp}{"weather"}}
 
@@ -184,20 +210,24 @@
 %\readJson{\TokyoWeater}{{\temp}}
 
 
+%%% CTAN example
+%\newread\injson \openin\injson=tug.json
+%\read\injson to \tugdata
+%\readJson{\TugData}{\tugdata}
+%\showById{\TugData}{"name"}
+%\edef\texdesc{\showById{\TugData}{"descriptions"}}
+%\showTugDesc{\texdesc}
 
-%id = \showArray{\showById{\MyJson}{id}}
 
-%class = \showById{\MyJson}{class}
-
-%data = \showById{\MyJson}{data}
-
-%info = \showById{\MyJson}{info}
-
+%%% test example
+% \readJson{\MyJson}{{id:[1,2,3], class:foo, data:{id:456}, info:"Is this a text?", hoge:"foo"}}
+%id = \showArray{\showById{\MyJson}{id}} \par
+%class = \showById{\MyJson}{class} \par 
+%data = \showById{\MyJson}{data} \par
+%info = \showById{\MyJson}{info} \par
 %\getById{\MyJson}{data}{\MyJsonData}
-
 %\readJson{\temp}{{\MyJsonData}}
-
-%data.id = \showById{\temp}{id}
+%data.id = \showById{\temp}{id} \par
 
 \makeatother
 
