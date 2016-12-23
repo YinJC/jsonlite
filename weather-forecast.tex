@@ -1,47 +1,100 @@
-\documentclass{article}
+% format json data from http://openweathermap.org/
+
+\documentclass[20pt]{extreport}
 \usepackage{jsontex}
+\usepackage{longtable}
+\usepackage{xcolor}
+
+\usepackage{fontspec}
+\setsansfont{DejaVuSans}
+\setmonofont{DejaVuSansMono}
+
+\usepackage{xltxtra}
+\setmainfont{migmix-2p-regular.ttf}
 
 \ExplSyntaxOn
 
-\def\showWeather#1{%
-  \seq_map_function:cN #1 \format_weather:n
-}
-
-\def\showForecast#1{%
-  \seq_map_function:cN #1 \format_forecast:n
+\cs_new:Npn \showEntry:nnx #1#2#3{%
+  \cs_set:Nn \format_entry:n { \exp_args:Nnnx \format_weather:nnn {##1}{#2}{#3} }
+  \seq_map_function:cN #1 \format_entry:n 
 }
 
 \cs_new:Npn \format_forecast:n #1 {
-  \readJson{\temp_forecast}{{#1}}
-  \edef\weather{\showJsonValueById{\temp_forecast}{"weather"}}
-  \showWeather{\weather}
-  \cs_undefine:N \temp_forecast
+  \readJson{\this_forecast}{{#1}}
+  \readJsonValueById{\weather_obj}{\this_forecast}{"weather"}
+  \readJsonValueById{\main_obj}{\this_forecast}{"main"}
+
+  \readJson{\json_main}{{\main_obj}}
+  \readJsonValueById{\the_temperament}{\json_main}{"temp"}
+
+  \showEntry:nnx {\weather_obj}{\this_forecast}{\the_temperament}
 }
 
-\cs_new:Npn \format_weather:n #1 {
-  \readJson{\temp_data}{{#1}}
-  \str_set:Nx \str_the_weather { \showJsonValueById{\temp_data}{"main"} }
-
+\cs_new:Npn \format_weather:nnn #1#2#3 { 
+  \showJsonValueById{#2}{"dt_txt"}
+  &
+  \readJson{\json_weather}{{#1}}
+  \readJsonValueById{\the_weather}{\json_weather}{"main"}
+  \str_set:Nx \str_the_weather { \the_weather }
   \str_case:onTF { \str_the_weather }
       {
-        {Clouds} { ☃ }
+        {Thunderstorm} { \large\textsf {⚡} }
+        {Drizzle} { \large\textsf {☔} }
+        {Rain} { {\color{blue} \large\textsf {☂}} }
+        {Snow} { \large\textsf {☃} }
+        {Atmosphere} { \large\textsf {♨} }
+        {Clear} { {\color{red} \large\textsf {☀}} }
+        {Clouds} { {\color{gray} \large\textsf {☁}} }
+        {Extreme} { \large\textsf {⚠} }
+        {Additional} { ? }
       }
-      { \par }
-      { \str_the_weather \par }
-  \cs_undefine:N \temp_data
+      { } 
+      { \str_the_weather }
+  &
+  #3 ℃
+  \\
 }
 
+\NewDocumentCommand{\showForecast}{ m }{%
+  \begin{longtable}{ l | c | r}
+    日時 & 空模様 & 気温 \\\hline
+    \endfirsthead
+    日時 & 空模様 & 気温 \\\hline
+    \endhead
+    \seq_map_function:cN #1 \format_forecast:n
+  \end{longtable}
+}
 \ExplSyntaxOff
+
+\immediate\write18{}
 
 \begin{document}
 
-\newread\injson \openin\injson=forecast.json
+\newread\injson \openin\injson moscow.json
 \read\injson to \forecast
-\readJson{\TokyoJpForecast}{\forecast}
+\readJson{\jsonForecast}{\forecast}
+\closein\injson
 
-\readJsonValueById{\cityValue}{\TokyoJpForecast}{"city"}
-\readJson{\cityName}{{\cityValue}}
-\readJsonValueById{\temp}{\cityName}{"name"}
-\message{\temp}
+\readJsonValueById{\weathewValues}{\jsonForecast}{"list"}
+\readJsonValueById{\cityValue}{\jsonForecast}{"city"}
+\readJson{\jsonCity}{{\cityValue}}
+\readJsonValueById{\city}{\jsonCity}{"name"}
+\city の5日間の天気
+\showForecast{\weathewValues}
+
+\clearpage
+
+\newread\injson \openin\injson=bachotech.json
+\read\injson to \forecast
+\readJson{\jsonForecast}{\forecast}
+\closein\injson
+
+\readJsonValueById{\weathewValues}{\jsonForecast}{"list"}
+\readJsonValueById{\cityValue}{\jsonForecast}{"city"}
+\readJson{\jsonCity}{{\cityValue}}
+\readJsonValueById{\city}{\jsonCity}{"name"}
+\city の5日間の天気
+\showForecast{\weathewValues}
+
 
 \end{document}
