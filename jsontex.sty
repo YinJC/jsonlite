@@ -122,12 +122,29 @@
   \exp_args:NNff \prop_put:Nnn #1 { #2 } { #3 }
 }
 
+\msg_new:nnn { jsonlite } { overwritten } { Proplist~\string#1~is~overwriten. }
+
 \NewDocumentCommand{\readJson}{ m m }
   {
+    \cs_if_exist:NTF #1 
+      { 
+        \cs_undefine:N #1
+%        \msg_warning:nnn { jsonlite } { overwritten } { #1 }
+      }
+      { }
     \prop_new:N #1
     \tl_set:Nn \cdr_input { \tl_tail:n { #2 } }
     \exp_args:NNff \inside_name:Nnn #1 {} { #2 }
   }
-\NewDocumentCommand{\showJsonValueById}{ m m } { \prop_item:Nn #1 { #2 } }
-\NewDocumentCommand{\readJsonValueById}{ m m m } { \prop_get:NnN #2 { #3 } #1 }
-\NewDocumentCommand{\showArray}{ m }{ \seq_use:cnnn { #1 } { ~and~ } { ,~ } { ,~and~ } }
+\NewDocumentCommand{\readJsonValueById}{ m m m }
+  {
+    \cs_if_exist:NTF #1 
+      { 
+        \cs_undefine:N #1
+%        \msg_warning:nnn { jsonlite } { overwritten } { #1 }
+      }
+      { }
+    \prop_get:NnN #2 { #3 } #1
+  }
+\NewDocumentCommand{\showJsonValueById}{ m m }
+  { \prop_item:Nn #1 { #2 } }
