@@ -49,7 +49,11 @@
        }
        { \tl_if_head_eq_charcode:nNTF { #4 } { [ }
          {
+           \cs_if_exist:cTF { seq_\name }
+              {\cs_undefine:c { seq_\name }}
+              {}
            \seq_new:c { seq_\name }
+           
            \exp_args:NNcfff \inside_array:Nnnnn #1 { seq_\name } {} { \name } { \cdr_input }
          }  
          { \tl_if_head_eq_charcode:nNTF { #4 } { " }
