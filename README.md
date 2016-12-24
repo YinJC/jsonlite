@@ -1,7 +1,7 @@
 # jsonlite
 TeX JSON reader
 
-# Interface
+# Interfaces
 
 * `\readJson { tokenlist } { balanced text }`
 
@@ -26,6 +26,7 @@ TeX JSON reader
 \showJsonValueById{\jsonJsonData}{"id"}      %=> 456
 ```
 
-# Restriction
+# Restrictions
 
-It doesn't distinguish number and string.
+* You can not use unbalanced text within JSON object. 
+* It doesn't distinguish number and string.
